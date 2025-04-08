@@ -51,11 +51,25 @@ export const useFileUpload = () => {
                 mediaTypes: ImagePicker.MediaTypeOptions.All,
                 quality: 1,
                 allowsEditing: true,
+                exif: true,
             });
 
             if (result.canceled) return [];
 
-            return result.assets;
+            // Process the assets to include file metadata
+            const processedAssets = await Promise.all(
+                result.assets.map(async (asset) => {
+                    const fileInfo = await getFileInfo(asset.uri);
+                    return {
+                        uri: asset.uri,
+                        name: asset.fileName || `photo-${Date.now()}.jpg`,
+                        mimeType: asset.mimeType || 'image/jpeg',
+                        size: fileInfo.size,
+                    };
+                })
+            );
+
+            return processedAssets;
         } catch (error) {
             console.error('Error picking from photos:', error);
             return [];
@@ -74,11 +88,25 @@ export const useFileUpload = () => {
                 mediaTypes: ImagePicker.MediaTypeOptions.All,
                 quality: 1,
                 allowsEditing: true,
+                exif: true,
             });
 
             if (result.canceled) return [];
 
-            return result.assets;
+            // Process the assets to include file metadata
+            const processedAssets = await Promise.all(
+                result.assets.map(async (asset) => {
+                    const fileInfo = await getFileInfo(asset.uri);
+                    return {
+                        uri: asset.uri,
+                        name: `camera-photo-${Date.now()}.jpg`,
+                        mimeType: asset.mimeType || 'image/jpeg',
+                        size: fileInfo.size,
+                    };
+                })
+            );
+
+            return processedAssets;
         } catch (error) {
             console.error('Error picking from camera:', error);
             return [];
@@ -133,10 +161,11 @@ export const useFileUpload = () => {
                             }`
                         );
 
-                        // For web, create a Blob from the chunk
+                        const mimeType =
+                            file.mimeType || 'application/octet-stream';
+
                         if (Platform.OS === 'web') {
-                            const mimeType =
-                                file.mimeType || 'application/octet-stream';
+                            // For web, create a Blob from the chunk
                             await uploadService.uploadChunk({
                                 fileId,
                                 chunkIndex: i,
@@ -145,13 +174,23 @@ export const useFileUpload = () => {
                                 size: chunk.byteLength,
                             });
                         } else {
-                            // For native platforms, use the file URI directly
+                            // For mobile, convert ArrayBuffer to base64
+                            const uint8Array = new Uint8Array(chunk);
+                            let binary = '';
+                            for (let i = 0; i < uint8Array.byteLength; i++) {
+                                binary += String.fromCharCode(uint8Array[i]);
+                            }
+                            const base64Chunk = btoa(binary);
+
                             await uploadService.uploadChunk({
                                 fileId,
                                 chunkIndex: i,
                                 totalChunks,
-                                data: file.uri,
+                                data: base64Chunk,
                                 size: chunk.byteLength,
+                                isBase64: true,
+                                mimeType:
+                                    file.mimeType || 'application/octet-stream',
                             });
                         }
 

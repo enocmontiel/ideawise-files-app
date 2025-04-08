@@ -16,6 +16,8 @@ export interface UploadChunk {
     totalChunks: number;
     data: Blob | string;
     size: number;
+    isBase64?: boolean;
+    mimeType?: string;
 }
 
 export interface UploadProgress {

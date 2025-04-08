@@ -32,12 +32,18 @@ export const createUploadStyles = (colorScheme: 'light' | 'dark') => {
     return StyleSheet.create({
         container: {
             flex: 1,
+            ...(Platform.OS === 'web'
+                ? { height: '100%' as any, overflow: 'hidden' }
+                : {}),
         },
         content: {
             flex: 1,
             alignItems: 'center',
             padding: 20,
             paddingBottom: 100,
+            ...(Platform.OS === 'web'
+                ? { overflowY: 'auto', height: '100%' as any }
+                : {}),
         },
         title: {
             fontSize: 24,
@@ -77,6 +83,7 @@ export const createUploadStyles = (colorScheme: 'light' | 'dark') => {
         selectedFilesContainer: {
             width: '100%',
             marginBottom: 20,
+            ...(Platform.OS === 'web' ? { minHeight: 200 } : { flex: 1 }),
         },
         selectedFilesTitle: {
             fontSize: 18,
@@ -86,6 +93,7 @@ export const createUploadStyles = (colorScheme: 'light' | 'dark') => {
         },
         fileList: {
             width: '100%',
+            ...(Platform.OS === 'web' ? { minHeight: 200 } : { flex: 1 }),
         },
         filePreview: {
             flexDirection: 'row',

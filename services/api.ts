@@ -26,15 +26,22 @@ export const uploadService = {
         formData.append('fileId', chunk.fileId);
         formData.append('chunkIndex', chunk.chunkIndex.toString());
         formData.append('totalChunks', chunk.totalChunks.toString());
+        formData.append(
+            'mimeType',
+            chunk.mimeType || 'application/octet-stream'
+        );
 
-        // Create a File object from the Blob with the original MIME type
-        const file = new File([chunk.data], `chunk-${chunk.chunkIndex}`, {
-            type:
-                chunk.data instanceof Blob
-                    ? chunk.data.type
-                    : 'application/octet-stream',
-        });
-        formData.append('chunk', file);
+        if (chunk.isBase64) {
+            // For base64 data, send it directly
+            formData.append('chunk', chunk.data as string);
+            formData.append('isBase64', 'true');
+        } else {
+            // Create a File object from the Blob with the original MIME type
+            const file = new File([chunk.data], `chunk-${chunk.chunkIndex}`, {
+                type: chunk.mimeType || 'application/octet-stream',
+            });
+            formData.append('chunk', file);
+        }
 
         await api.post(API_ENDPOINTS.UPLOAD.CHUNK, formData, {
             headers: {

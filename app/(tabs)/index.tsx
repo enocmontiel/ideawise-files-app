@@ -53,15 +53,15 @@ export default function UploadScreen() {
 
     return (
         <>
-            <ScrollView
+            <View
                 style={[
                     styles.container,
                     {
                         backgroundColor:
                             Colors[colorScheme ?? 'light'].background,
+                        paddingTop: insets.top,
                     },
                 ]}
-                contentContainerStyle={{ paddingTop: insets.top }}
             >
                 <View style={styles.content}>
                     <Text style={styles.title}>Upload Files</Text>
@@ -158,7 +158,9 @@ export default function UploadScreen() {
                     </View>
 
                     {selectedFiles.length > 0 && (
-                        <View style={styles.selectedFilesContainer}>
+                        <View
+                            style={[styles.selectedFilesContainer, { flex: 1 }]}
+                        >
                             <Text style={styles.selectedFilesTitle}>
                                 Selected Files ({selectedFiles.length})
                             </Text>
@@ -167,13 +169,14 @@ export default function UploadScreen() {
                                 renderItem={renderFilePreview}
                                 keyExtractor={(item) => item.id}
                                 style={styles.fileList}
+                                scrollEnabled={true}
                             />
                         </View>
                     )}
 
                     <UploadHistory />
                 </View>
-            </ScrollView>
+            </View>
             {selectedFiles.length > 0 && (
                 <View
                     style={[
