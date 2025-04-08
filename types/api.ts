@@ -14,7 +14,7 @@ export interface UploadChunk {
     fileId: string;
     chunkIndex: number;
     totalChunks: number;
-    data: Blob;
+    data: Blob | string;
     size: number;
 }
 

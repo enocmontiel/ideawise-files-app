@@ -26,7 +26,15 @@ export const uploadService = {
         formData.append('fileId', chunk.fileId);
         formData.append('chunkIndex', chunk.chunkIndex.toString());
         formData.append('totalChunks', chunk.totalChunks.toString());
-        formData.append('chunk', chunk.data);
+
+        // Create a File object from the Blob with the original MIME type
+        const file = new File([chunk.data], `chunk-${chunk.chunkIndex}`, {
+            type:
+                chunk.data instanceof Blob
+                    ? chunk.data.type
+                    : 'application/octet-stream',
+        });
+        formData.append('chunk', file);
 
         await api.post(API_ENDPOINTS.UPLOAD.CHUNK, formData, {
             headers: {
@@ -35,9 +43,13 @@ export const uploadService = {
         });
     },
 
-    finalizeUpload: async (fileId: string): Promise<FileMetadata> => {
+    finalizeUpload: async (
+        fileId: string,
+        fileName: string
+    ): Promise<FileMetadata> => {
         const response = await api.post(API_ENDPOINTS.UPLOAD.FINALIZE, {
             fileId,
+            fileName,
         });
         return response.data;
     },

@@ -5,6 +5,7 @@ import { uploadService } from '../services/api';
 import { useUploadStore } from '../store/uploadStore';
 import { FileMetadata, UploadProgress } from '../types/api';
 import { getFileInfo, readFileContent } from '../utils/fileUtils';
+import { Platform } from 'react-native';
 
 const CHUNK_SIZE = 1024 * 1024; // 1MB
 const MAX_CONCURRENT_UPLOADS = 3;
@@ -112,23 +113,47 @@ export const useFileUpload = () => {
                 // Read file in chunks
                 const fileContent = await readFileContent(file.uri);
 
-                const totalChunks = Math.ceil(fileContent.length / CHUNK_SIZE);
+                const totalChunks = Math.ceil(
+                    fileContent.byteLength / CHUNK_SIZE
+                );
                 let retryCount = 0;
 
                 for (let i = 0; i < totalChunks; i++) {
-                    const chunk = fileContent.slice(
-                        i * CHUNK_SIZE,
-                        (i + 1) * CHUNK_SIZE
+                    const start = i * CHUNK_SIZE;
+                    const end = Math.min(
+                        (i + 1) * CHUNK_SIZE,
+                        fileContent.byteLength
                     );
+                    const chunk = fileContent.slice(start, end);
 
                     try {
-                        await uploadService.uploadChunk({
-                            fileId,
-                            chunkIndex: i,
-                            totalChunks,
-                            data: new Blob([chunk], { type: file.mimeType }),
-                            size: chunk.length,
-                        });
+                        console.log(
+                            `Uploading chunk ${i + 1}/${totalChunks} for file ${
+                                file.name
+                            }`
+                        );
+
+                        // For web, create a Blob from the chunk
+                        if (Platform.OS === 'web') {
+                            const mimeType =
+                                file.mimeType || 'application/octet-stream';
+                            await uploadService.uploadChunk({
+                                fileId,
+                                chunkIndex: i,
+                                totalChunks,
+                                data: new Blob([chunk], { type: mimeType }),
+                                size: chunk.byteLength,
+                            });
+                        } else {
+                            // For native platforms, use the file URI directly
+                            await uploadService.uploadChunk({
+                                fileId,
+                                chunkIndex: i,
+                                totalChunks,
+                                data: file.uri,
+                                size: chunk.byteLength,
+                            });
+                        }
 
                         updateUploadProgress(fileId, {
                             fileId,
@@ -136,6 +161,7 @@ export const useFileUpload = () => {
                             status: 'uploading',
                         });
                     } catch (error) {
+                        console.error(`Error uploading chunk ${i}:`, error);
                         if (retryCount < MAX_RETRIES) {
                             retryCount++;
                             i--; // Retry the same chunk
@@ -152,7 +178,10 @@ export const useFileUpload = () => {
                 }
 
                 // Finalize upload
-                const uploadedFile = await uploadService.finalizeUpload(fileId);
+                const uploadedFile = await uploadService.finalizeUpload(
+                    fileId,
+                    file.name || 'unnamed-file'
+                );
                 addFile(uploadedFile);
 
                 updateUploadProgress(fileId, {
