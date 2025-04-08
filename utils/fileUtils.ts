@@ -99,3 +99,10 @@ export async function readFileContent(uri: string): Promise<ArrayBuffer> {
         throw error;
     }
 }
+
+export const getFileUrl = (path: string | undefined): string | undefined => {
+    if (!path) return undefined;
+
+    const baseUrl = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
+    return path.startsWith('http') ? path : `${baseUrl}${path}`;
+};

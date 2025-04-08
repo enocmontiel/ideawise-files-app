@@ -4,6 +4,7 @@ import { useUploadStore } from '../store/uploadStore';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
+import { getFileUrl } from '../utils/fileUtils';
 
 export default function UploadHistory() {
     const { uploadHistory, removeFile } = useUploadStore();
@@ -30,7 +31,9 @@ export default function UploadHistory() {
                         <BlurView intensity={50} style={styles.blurContainer}>
                             {file.thumbnailUrl ? (
                                 <Image
-                                    source={{ uri: file.thumbnailUrl }}
+                                    source={{
+                                        uri: getFileUrl(file.thumbnailUrl),
+                                    }}
                                     style={styles.thumbnail}
                                     resizeMode="cover"
                                 />
