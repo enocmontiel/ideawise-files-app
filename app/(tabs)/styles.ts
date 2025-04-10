@@ -14,7 +14,8 @@ export const createUploadStyles = (colorScheme: 'light' | 'dark') => {
             justifyContent: 'center',
             marginBottom: 20,
             borderColor: Colors[colorScheme].tint,
-            backgroundColor: 'transparent',
+            background:
+                'linear-gradient(135deg, #e0f7fa 0%, #e8f5e9 20%, #fff3e0 40%, #fce4ec 60%, #f3e5f5 80%, #e3f2fd 100%)',
         } as ViewStyle,
         default: {
             width: '100%',
@@ -26,6 +27,7 @@ export const createUploadStyles = (colorScheme: 'light' | 'dark') => {
             justifyContent: 'center',
             marginBottom: 20,
             borderColor: Colors[colorScheme].tint,
+            backgroundColor: '#e0f7fa', // Fallback for React Native since gradients need a separate component
         } as ViewStyle,
     });
 
@@ -73,7 +75,14 @@ export const createUploadStyles = (colorScheme: 'light' | 'dark') => {
             padding: 12,
             borderRadius: 8,
             gap: 8,
-            backgroundColor: Colors[colorScheme].tint,
+            ...(Platform.OS === 'web'
+                ? {
+                      background:
+                          'linear-gradient(135deg, #e0f7fa 0%, #e8f5e9 20%, #fff3e0 40%, #fce4ec 60%, #f3e5f5 80%, #e3f2fd 100%)',
+                  }
+                : {
+                      backgroundColor: '#e0f7fa', // Fallback for React Native
+                  }),
         },
         buttonText: {
             color: '#FFFFFF',

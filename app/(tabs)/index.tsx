@@ -8,6 +8,7 @@ import {
     FlatList,
     ActivityIndicator,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
@@ -110,7 +111,6 @@ export default function UploadScreen() {
                             style={[
                                 styles.button,
                                 {
-                                    backgroundColor: Colors.light.tint,
                                     width: '100%',
                                     height: 200,
                                     justifyContent: 'center',
@@ -119,20 +119,45 @@ export default function UploadScreen() {
                                     marginBottom: 20,
                                     flexDirection: 'column',
                                     gap: 12,
+                                    overflow: 'hidden',
                                 },
                             ]}
                             onPress={handleFilePick}
                             disabled={isUploading}
                         >
-                            <View>
+                            <LinearGradient
+                                colors={[
+                                    '#e0f7fa',
+                                    '#e8f5e9',
+                                    '#fff3e0',
+                                    '#fce4ec',
+                                    '#f3e5f5',
+                                    '#e3f2fd',
+                                ]}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 1 }}
+                                style={{
+                                    position: 'absolute',
+                                    left: 0,
+                                    right: 0,
+                                    top: 0,
+                                    bottom: 0,
+                                }}
+                            />
+                            <View style={{ zIndex: 1 }}>
                                 <MaterialCommunityIcons
                                     name="cloud-upload"
                                     size={48}
-                                    color="white"
+                                    color={Colors.light.tint}
                                 />
                             </View>
-                            <View>
-                                <Text style={styles.buttonText}>
+                            <View style={{ zIndex: 1 }}>
+                                <Text
+                                    style={[
+                                        styles.buttonText,
+                                        { color: Colors.light.tint },
+                                    ]}
+                                >
                                     Select Files
                                 </Text>
                             </View>
