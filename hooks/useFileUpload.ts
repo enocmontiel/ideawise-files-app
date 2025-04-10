@@ -115,6 +115,7 @@ export const useFileUpload = () => {
 
     const uploadFile = useCallback(
         async (file: Asset) => {
+            let fileId: string = '';
             try {
                 setIsUploading(true);
                 const fileInfo = await getFileInfo(file.uri);
@@ -124,16 +125,19 @@ export const useFileUpload = () => {
                 }
 
                 // Initiate upload
-                const { fileId, chunks, chunkSize } =
-                    await uploadService.initiateUpload({
-                        name: file.name || 'unnamed',
-                        size: fileInfo.size,
-                        type: file.mimeType || 'application/octet-stream',
-                    } as File);
+                const {
+                    fileId: tempFileId,
+                    chunks,
+                    chunkSize,
+                } = await uploadService.initiateUpload({
+                    name: file.name || 'unnamed',
+                    size: fileInfo.size,
+                    type: file.mimeType || 'application/octet-stream',
+                } as File);
 
                 // Create initial progress
-                updateUploadProgress(fileId, {
-                    fileId,
+                updateUploadProgress(tempFileId, {
+                    fileId: tempFileId,
                     progress: 0,
                     status: 'pending',
                 });
@@ -167,7 +171,7 @@ export const useFileUpload = () => {
                         if (Platform.OS === 'web') {
                             // For web, create a Blob from the chunk
                             await uploadService.uploadChunk({
-                                fileId,
+                                fileId: tempFileId,
                                 chunkIndex: i,
                                 totalChunks,
                                 data: new Blob([chunk], { type: mimeType }),
@@ -183,7 +187,7 @@ export const useFileUpload = () => {
                             const base64Chunk = btoa(binary);
 
                             await uploadService.uploadChunk({
-                                fileId,
+                                fileId: tempFileId,
                                 chunkIndex: i,
                                 totalChunks,
                                 data: base64Chunk,
@@ -195,8 +199,8 @@ export const useFileUpload = () => {
                         }
 
                         // Update progress (normalize to 0-1 range)
-                        updateUploadProgress(fileId, {
-                            fileId,
+                        updateUploadProgress(tempFileId, {
+                            fileId: tempFileId,
                             progress: (i + 1) / totalChunks,
                             status: 'uploading',
                         });
@@ -210,8 +214,8 @@ export const useFileUpload = () => {
 
                         retryCount++;
                         if (retryCount >= MAX_RETRIES) {
-                            updateUploadProgress(fileId, {
-                                fileId,
+                            updateUploadProgress(tempFileId, {
+                                fileId: tempFileId,
                                 progress: i / totalChunks,
                                 status: 'error',
                                 error: 'Failed to upload chunk after multiple retries',
@@ -227,13 +231,13 @@ export const useFileUpload = () => {
 
                 // Finalize upload
                 const metadata = await uploadService.finalizeUpload(
-                    fileId,
+                    tempFileId,
                     file.name || 'unnamed-file'
                 );
 
                 // Update progress to complete
-                updateUploadProgress(fileId, {
-                    fileId,
+                updateUploadProgress(tempFileId, {
+                    fileId: tempFileId,
                     progress: 1,
                     status: 'completed',
                 });
@@ -241,6 +245,7 @@ export const useFileUpload = () => {
                 // Add file to store
                 addFile(metadata);
 
+                fileId = tempFileId;
                 return metadata;
             } catch (error: any) {
                 console.error('Error uploading file:', error);
