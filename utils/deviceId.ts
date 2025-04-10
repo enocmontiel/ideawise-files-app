@@ -1,26 +1,45 @@
 import { v4 as uuidv4 } from 'uuid';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Crypto from 'expo-crypto';
+import { Platform } from 'react-native';
 
 const DEVICE_ID_KEY = 'device_id';
 
+/**
+ * Generate a UUID using the appropriate method for the platform
+ */
+const generateUUID = async (): Promise<string> => {
+    if (Platform.OS === 'web') {
+        return uuidv4();
+    }
+    return await Crypto.randomUUID();
+};
+
 export const deviceIdUtil = {
     /**
-     * Gets the device ID from localStorage or creates a new one if it doesn't exist
+     * Gets the device ID from AsyncStorage or creates a new one if it doesn't exist
      */
     getDeviceId: async (): Promise<string> => {
-        let deviceId = localStorage.getItem(DEVICE_ID_KEY);
+        try {
+            let deviceId = await AsyncStorage.getItem(DEVICE_ID_KEY);
 
-        if (!deviceId) {
-            deviceId = uuidv4();
-            localStorage.setItem(DEVICE_ID_KEY, deviceId);
+            if (!deviceId) {
+                deviceId = await generateUUID();
+                await AsyncStorage.setItem(DEVICE_ID_KEY, deviceId);
+            }
+
+            return deviceId;
+        } catch (error) {
+            console.error('Error managing device ID:', error);
+            // Generate a temporary ID if storage fails
+            return await generateUUID();
         }
-
-        return deviceId;
     },
 
     /**
      * Sets a specific device ID (useful for testing or when migrating from another system)
      */
-    setDeviceId: (deviceId: string): void => {
+    setDeviceId: async (deviceId: string): Promise<void> => {
         if (!deviceId) {
             throw new Error('Device ID cannot be empty');
         }
@@ -34,13 +53,13 @@ export const deviceIdUtil = {
             throw new Error('Invalid device ID format. Must be a valid UUID.');
         }
 
-        localStorage.setItem(DEVICE_ID_KEY, deviceId);
+        await AsyncStorage.setItem(DEVICE_ID_KEY, deviceId);
     },
 
     /**
      * Clears the stored device ID (useful for logout/cleanup)
      */
-    clearDeviceId: (): void => {
-        localStorage.removeItem(DEVICE_ID_KEY);
+    clearDeviceId: async (): Promise<void> => {
+        await AsyncStorage.removeItem(DEVICE_ID_KEY);
     },
 };

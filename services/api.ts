@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { AxiosHeaders } from 'axios';
 import {
     API_ENDPOINTS,
     FileMetadata,
@@ -14,9 +14,15 @@ const api = axios.create({
 
 // Add request interceptor to include deviceId in headers
 api.interceptors.request.use(async (config) => {
-    const deviceId = await deviceIdUtil.getDeviceId();
-    config.headers['X-Device-ID'] = deviceId;
-    return config;
+    try {
+        const deviceId = await deviceIdUtil.getDeviceId();
+        config.headers = config.headers || new AxiosHeaders();
+        config.headers.set('X-Device-ID', deviceId);
+        return config;
+    } catch (error) {
+        console.error('Error setting device ID in headers:', error);
+        return config;
+    }
 });
 
 export const uploadService = {
