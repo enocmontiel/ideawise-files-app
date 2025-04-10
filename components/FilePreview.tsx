@@ -1,7 +1,19 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
+import {
+    View,
+    Text,
+    TouchableOpacity,
+    Image,
+    StyleSheet,
+    ActivityIndicator,
+} from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Colors } from '../constants/Colors';
+import { useUploadStore } from '../store/uploadStore';
+import Animated, {
+    useAnimatedStyle,
+    withSpring,
+} from 'react-native-reanimated';
 
 interface FilePreviewProps {
     id: string;
@@ -26,11 +38,58 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
     onRemove,
     formatFileSize,
 }) => {
+    const { activeUploads } = useUploadStore();
+    const uploadProgress = activeUploads[id];
+    const isUploading = uploadProgress?.status === 'uploading';
+    const isComplete = uploadProgress?.progress === 1;
+    const hasError = uploadProgress?.error;
+
+    const progressStyle = useAnimatedStyle(() => ({
+        width: withSpring(`${(uploadProgress?.progress || 0) * 100}%`, {
+            damping: 20,
+            stiffness: 90,
+        }),
+    }));
+
+    const getStatusIcon = () => {
+        if (isComplete) {
+            return (
+                <MaterialCommunityIcons
+                    name="check-circle"
+                    size={24}
+                    color="#4CAF50"
+                    style={styles.statusIcon}
+                />
+            );
+        }
+        if (hasError) {
+            return (
+                <MaterialCommunityIcons
+                    name="alert-circle"
+                    size={24}
+                    color="#FF3B30"
+                    style={styles.statusIcon}
+                />
+            );
+        }
+        if (isUploading) {
+            return (
+                <ActivityIndicator
+                    size="small"
+                    color={Colors[colorScheme].tint}
+                    style={styles.statusIcon}
+                />
+            );
+        }
+        return null;
+    };
+
     return (
         <View
             style={[
                 styles.filePreview,
                 { backgroundColor: Colors[colorScheme].background },
+                isUploading && styles.uploadingFile,
             ]}
         >
             <View style={styles.fileInfo}>
@@ -67,19 +126,46 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
                         ]}
                     >
                         {formatFileSize(size)}
+                        {uploadProgress && (
+                            <Text style={styles.progressText}>
+                                {' • '}
+                                {Math.round(uploadProgress.progress * 100)}%
+                            </Text>
+                        )}
                     </Text>
+                    {(isUploading || hasError) && (
+                        <View style={styles.progressContainer}>
+                            <Animated.View
+                                style={[
+                                    styles.progressBar,
+                                    progressStyle,
+                                    hasError && styles.progressBarError,
+                                ]}
+                            />
+                        </View>
+                    )}
+                    {hasError && (
+                        <Text style={styles.errorText} numberOfLines={1}>
+                            {uploadProgress.error}
+                        </Text>
+                    )}
                 </View>
             </View>
-            <TouchableOpacity
-                style={styles.removeButton}
-                onPress={() => onRemove(id)}
-            >
-                <MaterialCommunityIcons
-                    name="close"
-                    size={20}
-                    color={Colors[colorScheme].text}
-                />
-            </TouchableOpacity>
+            <View style={styles.rightContainer}>
+                {getStatusIcon()}
+                {!isUploading && (
+                    <TouchableOpacity
+                        style={styles.removeButton}
+                        onPress={() => onRemove(id)}
+                    >
+                        <MaterialCommunityIcons
+                            name="close"
+                            size={20}
+                            color={Colors[colorScheme].text}
+                        />
+                    </TouchableOpacity>
+                )}
+            </View>
         </View>
     );
 };
@@ -94,6 +180,10 @@ const styles = StyleSheet.create({
         marginBottom: 8,
         borderWidth: 1,
         borderColor: '#E0E0E0',
+    },
+    uploadingFile: {
+        borderColor: Colors.light.tint,
+        backgroundColor: '#F5F5F5',
     },
     fileInfo: {
         flexDirection: 'row',
@@ -123,7 +213,39 @@ const styles = StyleSheet.create({
         fontSize: 14,
         opacity: 0.7,
     },
+    progressText: {
+        color: Colors.light.tint,
+        fontWeight: '500',
+    },
+    rightContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
     removeButton: {
         padding: 8,
+    },
+    progressContainer: {
+        height: 6,
+        backgroundColor: '#E0E0E0',
+        borderRadius: 3,
+        marginTop: 8,
+        overflow: 'hidden',
+    },
+    progressBar: {
+        height: '100%',
+        backgroundColor: Colors.light.tint,
+        borderRadius: 3,
+    },
+    progressBarError: {
+        backgroundColor: '#FF3B30',
+    },
+    errorText: {
+        color: '#FF3B30',
+        fontSize: 12,
+        marginTop: 4,
+    },
+    statusIcon: {
+        marginRight: 4,
     },
 });

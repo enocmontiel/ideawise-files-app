@@ -31,6 +31,7 @@ type Asset = {
 export const useUpload = () => {
     const {
         isUploading,
+        setIsUploading,
         pickFiles,
         pickFromPhotos,
         pickFromCamera,
@@ -265,17 +266,42 @@ export const useUpload = () => {
     const handleUploadAll = useCallback(async () => {
         if (selectedFiles.length === 0) return;
 
-        for (const file of selectedFiles) {
-            await uploadFile({
-                uri: file.uri,
-                name: file.name,
-                mimeType: file.type,
-                size: file.size,
-            });
-        }
+        try {
+            setIsUploading(true);
 
-        setSelectedFiles([]);
-    }, [selectedFiles, uploadFile]);
+            // Process files in batches for concurrent uploads
+            const batchSize = 3; // Number of concurrent uploads
+            const files = [...selectedFiles];
+            const results = [];
+
+            while (files.length > 0) {
+                const batch = files.splice(0, batchSize);
+                const uploadPromises = batch.map((file) =>
+                    uploadFile({
+                        uri: file.uri,
+                        name: file.name,
+                        mimeType: file.type,
+                        size: file.size,
+                    }).catch((error) => {
+                        console.error(`Error uploading ${file.name}:`, error);
+                        return null;
+                    })
+                );
+
+                const batchResults = await Promise.all(uploadPromises);
+                results.push(...batchResults.filter(Boolean));
+            }
+
+            // Clear selected files only if all uploads were successful
+            if (results.length === selectedFiles.length) {
+                setSelectedFiles([]);
+            }
+        } catch (error) {
+            console.error('Error in handleUploadAll:', error);
+        } finally {
+            setIsUploading(false);
+        }
+    }, [selectedFiles, uploadFile, setIsUploading]);
 
     const removeFile = useCallback((id: string) => {
         setSelectedFiles((prev) => prev.filter((file) => file.id !== id));

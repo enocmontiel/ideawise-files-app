@@ -1,124 +1,135 @@
-import { API_URL } from '../constants/Config';
-import { FileMetadata, InitiateUploadResponse } from '../types/api';
+import { api } from './api';
+import { FileMetadata, UploadProgress, API_ENDPOINTS } from '../types/api';
+import { useNotificationStore } from '../store/notificationStore';
+import { AxiosProgressEvent } from 'axios';
 import { deviceIdUtil } from '../utils/deviceId';
 
-const CHUNK_SIZE = 1024 * 1024; // 1MB chunks
+const MAX_FILE_SIZE_MB = 100;
 
 export const fileService = {
-    deleteFile: async (fileId: string): Promise<void> => {
-        const deviceId = await deviceIdUtil.getDeviceId();
-        const response = await fetch(`${API_URL}/files/${fileId}`, {
-            method: 'DELETE',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-Device-ID': deviceId,
-            },
-        });
+    async uploadFile(
+        file: File | Blob,
+        fileId: string,
+        onProgress?: (progress: UploadProgress) => void
+    ): Promise<FileMetadata | null> {
+        try {
+            // Check file size before attempting upload
+            const fileSizeMB = file.size / (1024 * 1024);
+            if (fileSizeMB > MAX_FILE_SIZE_MB) {
+                useNotificationStore.getState().addNotification({
+                    type: 'error',
+                    title: 'File Too Large',
+                    message: `File size (${fileSizeMB.toFixed(
+                        1
+                    )}MB) exceeds the ${MAX_FILE_SIZE_MB}MB limit`,
+                });
+                return null;
+            }
 
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || 'Failed to delete file');
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const response = await api.post<FileMetadata>(
+                API_ENDPOINTS.UPLOAD.INITIATE,
+                formData,
+                {
+                    headers: {
+                        'Content-Type': 'multipart/form-data',
+                    },
+                    onUploadProgress: (progressEvent: AxiosProgressEvent) => {
+                        if (onProgress && progressEvent.total) {
+                            onProgress({
+                                status: 'uploading',
+                                progress:
+                                    progressEvent.loaded / progressEvent.total,
+                                fileId,
+                            });
+                        }
+                    },
+                }
+            );
+
+            useNotificationStore.getState().addNotification({
+                type: 'success',
+                title: 'Upload Complete',
+                message: `${response.data.name} has been uploaded successfully`,
+            });
+
+            return response.data;
+        } catch (error: any) {
+            let errorMessage = 'Unknown error occurred';
+            let errorTitle = 'Upload Failed';
+
+            if (error.response?.data?.error) {
+                // Handle specific API error messages
+                errorMessage = error.response.data.error;
+                if (errorMessage.includes('File size exceeds limit')) {
+                    errorTitle = 'File Too Large';
+                    errorMessage = `File size exceeds the ${MAX_FILE_SIZE_MB}MB limit`;
+                }
+            } else if (error instanceof Error) {
+                errorMessage = error.message;
+            }
+
+            useNotificationStore.getState().addNotification({
+                type: 'error',
+                title: errorTitle,
+                message: errorMessage,
+            });
+
+            return null;
         }
     },
 
-    listFiles: async (): Promise<FileMetadata[]> => {
-        const deviceId = await deviceIdUtil.getDeviceId();
-        const response = await fetch(`${API_URL}/files/device/${deviceId}`, {
-            headers: {
-                'Content-Type': 'application/json',
-                'X-Device-ID': deviceId,
-            },
-        });
-
-        if (!response.ok) {
-            throw new Error('Failed to fetch files');
-        }
-
-        return response.json();
-    },
-
-    uploadFile: async (file: File): Promise<FileMetadata> => {
+    async listFiles(): Promise<FileMetadata[]> {
         try {
             const deviceId = await deviceIdUtil.getDeviceId();
-            console.log('Using deviceId:', deviceId); // Debug log
-
-            // Step 1: Initiate upload
-            const initiateResponse = await fetch(`${API_URL}/upload/initiate`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Device-ID': deviceId,
-                },
-                body: JSON.stringify({
-                    fileName: file.name,
-                    fileSize: file.size,
-                    mimeType: file.type,
-                    deviceId, // Include deviceId in body
-                }),
-            });
-
-            if (!initiateResponse.ok) {
-                const error = await initiateResponse.json();
-                throw new Error(error.error || 'Failed to initiate upload');
-            }
-
-            const initData =
-                (await initiateResponse.json()) as InitiateUploadResponse;
-            console.log('Upload initiated:', initData); // Debug log
-
-            // Step 2: Upload chunks
-            const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
-            for (let i = 0; i < totalChunks; i++) {
-                const start = i * CHUNK_SIZE;
-                const end = Math.min(start + CHUNK_SIZE, file.size);
-                const chunk = file.slice(start, end);
-
-                const formData = new FormData();
-                formData.append('chunk', chunk);
-                formData.append('fileId', initData.fileId);
-                formData.append('chunkIndex', i.toString());
-                formData.append('totalChunks', totalChunks.toString());
-                formData.append('deviceId', deviceId); // Include deviceId in form data
-
-                const chunkResponse = await fetch(`${API_URL}/upload/chunk`, {
-                    method: 'POST',
-                    headers: {
-                        'X-Device-ID': deviceId,
-                    },
-                    body: formData,
-                });
-
-                if (!chunkResponse.ok) {
-                    throw new Error(`Failed to upload chunk ${i}`);
-                }
-
-                console.log(`Chunk ${i + 1}/${totalChunks} uploaded`); // Debug log
-            }
-
-            // Step 3: Finalize upload
-            const finalizeResponse = await fetch(`${API_URL}/upload/finalize`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Device-ID': deviceId,
-                },
-                body: JSON.stringify({
-                    fileId: initData.fileId,
-                    fileName: file.name,
-                    deviceId, // Include deviceId in body
-                }),
-            });
-
-            if (!finalizeResponse.ok) {
-                throw new Error('Failed to finalize upload');
-            }
-
-            const result = await finalizeResponse.json();
-            console.log('Upload finalized:', result); // Debug log
-            return result;
+            const response = await api.get<FileMetadata[]>(
+                API_ENDPOINTS.FILES.LIST.replace(':deviceId', deviceId)
+            );
+            return response.data;
         } catch (error) {
-            console.error('Upload error:', error);
+            const errorMessage =
+                error instanceof Error
+                    ? error.message
+                    : 'Unknown error occurred';
+
+            useNotificationStore.getState().addNotification({
+                type: 'error',
+                title: 'Error Loading Files',
+                message: `Failed to load files: ${errorMessage}`,
+            });
+
             throw error;
         }
+    },
+
+    async deleteFile(fileId: string): Promise<void> {
+        try {
+            await api.delete(API_ENDPOINTS.FILES.DELETE.replace(':id', fileId));
+
+            useNotificationStore.getState().addNotification({
+                type: 'success',
+                title: 'File Deleted',
+                message: 'File has been deleted successfully',
+            });
+        } catch (error) {
+            const errorMessage =
+                error instanceof Error
+                    ? error.message
+                    : 'Unknown error occurred';
+
+            useNotificationStore.getState().addNotification({
+                type: 'error',
+                title: 'Delete Failed',
+                message: `Failed to delete file: ${errorMessage}`,
+            });
+
+            throw error;
+        }
+    },
+
+    getFileUrl(path: string): string {
+        return `${api.defaults.baseURL}${path}`;
     },
 };

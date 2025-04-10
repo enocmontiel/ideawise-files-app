@@ -1,10 +1,23 @@
-import React from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, Image } from 'react-native';
+import React, { useState } from 'react';
+import {
+    StyleSheet,
+    View,
+    Text,
+    TouchableOpacity,
+    Image,
+    ActivityIndicator,
+} from 'react-native';
 import { useUploadStore } from '../store/uploadStore';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
-import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
+import Animated, {
+    FadeIn,
+    FadeOut,
+    useAnimatedStyle,
+    withSpring,
+} from 'react-native-reanimated';
 import { getFileUrl } from '../utils/fileUtils';
+import { FileFilter, FileFilterType } from './FileFilter';
 
 interface UploadHistoryProps {
     onDelete?: (fileId: string) => void;
@@ -12,6 +25,7 @@ interface UploadHistoryProps {
 
 export default function UploadHistory({ onDelete }: UploadHistoryProps) {
     const { uploadHistory, removeFile } = useUploadStore();
+    const [filter, setFilter] = useState<FileFilterType>('all');
 
     const handleDelete = (fileId: string) => {
         if (onDelete) {
@@ -21,15 +35,30 @@ export default function UploadHistory({ onDelete }: UploadHistoryProps) {
         }
     };
 
+    const filteredFiles = uploadHistory.filter((file) => {
+        if (filter === 'all') return true;
+        if (filter === 'image') return file.mimeType.startsWith('image/');
+        if (filter === 'video') return file.mimeType.startsWith('video/');
+        if (filter === 'document')
+            return (
+                !file.mimeType.startsWith('image/') &&
+                !file.mimeType.startsWith('video/')
+            );
+        return true;
+    });
+
     if (uploadHistory.length === 0) {
         return null;
     }
 
     return (
         <View style={styles.container}>
-            <Text style={styles.title}>Upload History</Text>
+            <View style={styles.header}>
+                <Text style={styles.title}>Upload History</Text>
+                <FileFilter onFilterChange={setFilter} currentFilter={filter} />
+            </View>
             <View style={styles.grid}>
-                {uploadHistory.map((file) => (
+                {filteredFiles.map((file) => (
                     <Animated.View
                         key={file.id}
                         entering={FadeIn}
@@ -51,7 +80,11 @@ export default function UploadHistory({ onDelete }: UploadHistoryProps) {
                                         name={
                                             file.mimeType.startsWith('image/')
                                                 ? 'image'
-                                                : 'videocam'
+                                                : file.mimeType.startsWith(
+                                                      'video/'
+                                                  )
+                                                ? 'videocam'
+                                                : 'document'
                                         }
                                         size={32}
                                         color="#8E8E93"
@@ -88,10 +121,15 @@ const styles = StyleSheet.create({
     container: {
         marginTop: 20,
     },
+    header: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 16,
+    },
     title: {
         fontSize: 18,
         fontWeight: '600',
-        marginBottom: 16,
         color: '#000000',
     },
     grid: {
@@ -117,10 +155,10 @@ const styles = StyleSheet.create({
     placeholder: {
         width: '100%',
         height: '60%',
-        backgroundColor: '#F2F2F7',
         borderRadius: 8,
-        alignItems: 'center',
+        backgroundColor: '#F2F2F7',
         justifyContent: 'center',
+        alignItems: 'center',
     },
     fileInfo: {
         marginTop: 8,
@@ -140,7 +178,5 @@ const styles = StyleSheet.create({
         top: 8,
         right: 8,
         padding: 4,
-        borderRadius: 12,
-        backgroundColor: 'rgba(255, 255, 255, 0.8)',
     },
 });

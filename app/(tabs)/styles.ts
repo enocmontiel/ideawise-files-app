@@ -183,5 +183,8 @@ export const createUploadStyles = (colorScheme: 'light' | 'dark') => {
             } as ViewStyle,
             default: dropZoneStyle,
         }),
+        buttonSpinner: {
+            marginRight: 8,
+        },
     });
 };

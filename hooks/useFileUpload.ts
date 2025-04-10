@@ -194,44 +194,64 @@ export const useFileUpload = () => {
                             });
                         }
 
+                        // Update progress (normalize to 0-1 range)
                         updateUploadProgress(fileId, {
                             fileId,
-                            progress: ((i + 1) / totalChunks) * 100,
+                            progress: (i + 1) / totalChunks,
                             status: 'uploading',
                         });
+
+                        retryCount = 0; // Reset retry count on successful upload
                     } catch (error) {
-                        console.error(`Error uploading chunk ${i}:`, error);
-                        if (retryCount < MAX_RETRIES) {
-                            retryCount++;
-                            i--; // Retry the same chunk
-                            await new Promise((resolve) =>
-                                setTimeout(
-                                    resolve,
-                                    Math.pow(2, retryCount) * 1000
-                                )
-                            );
-                            continue;
+                        console.error(
+                            `Error uploading chunk ${i + 1}/${totalChunks}:`,
+                            error
+                        );
+
+                        retryCount++;
+                        if (retryCount >= MAX_RETRIES) {
+                            updateUploadProgress(fileId, {
+                                fileId,
+                                progress: i / totalChunks,
+                                status: 'error',
+                                error: 'Failed to upload chunk after multiple retries',
+                            });
+                            throw error;
                         }
-                        throw error;
+
+                        // Retry the same chunk
+                        i--;
+                        continue;
                     }
                 }
 
                 // Finalize upload
-                const uploadedFile = await uploadService.finalizeUpload(
+                const metadata = await uploadService.finalizeUpload(
                     fileId,
                     file.name || 'unnamed-file'
                 );
-                addFile(uploadedFile);
 
+                // Update progress to complete
                 updateUploadProgress(fileId, {
                     fileId,
-                    progress: 100,
+                    progress: 1,
                     status: 'completed',
                 });
 
-                return uploadedFile;
-            } catch (error) {
+                // Add file to store
+                addFile(metadata);
+
+                return metadata;
+            } catch (error: any) {
                 console.error('Error uploading file:', error);
+                if (fileId) {
+                    updateUploadProgress(fileId, {
+                        fileId,
+                        progress: 0,
+                        status: 'error',
+                        error: error.message || 'Failed to upload file',
+                    });
+                }
                 throw error;
             } finally {
                 setIsUploading(false);
@@ -254,6 +274,7 @@ export const useFileUpload = () => {
 
     return {
         isUploading,
+        setIsUploading,
         pickFiles,
         pickFromPhotos,
         pickFromCamera,

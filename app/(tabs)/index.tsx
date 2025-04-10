@@ -6,6 +6,7 @@ import {
     Platform,
     ScrollView,
     FlatList,
+    ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -13,6 +14,8 @@ import { Colors } from '../../constants/Colors';
 import { useUpload } from '../../hooks/useUpload';
 import { FilePreview } from '../../components/FilePreview';
 import { createUploadStyles } from './styles';
+import { ScreenHeader } from '../../components/ui/ScreenHeader';
+import { useUploadStore } from '../../store/uploadStore';
 
 export default function UploadScreen() {
     const {
@@ -30,8 +33,21 @@ export default function UploadScreen() {
         handleDropEvent,
     } = useUpload();
 
+    const { activeUploads } = useUploadStore();
     const insets = useSafeAreaInsets();
     const styles = createUploadStyles('light');
+
+    // Calculate overall progress
+    const calculateOverallProgress = () => {
+        if (selectedFiles.length === 0) return 0;
+        const totalProgress = selectedFiles.reduce((acc, file) => {
+            const fileProgress = activeUploads[file.id]?.progress || 0;
+            return acc + fileProgress;
+        }, 0);
+        return totalProgress / selectedFiles.length;
+    };
+
+    const overallProgress = calculateOverallProgress();
 
     const renderFilePreview = ({ item }: { item: any }) => (
         <FilePreview
@@ -52,14 +68,11 @@ export default function UploadScreen() {
             <View
                 style={[
                     styles.container,
-                    {
-                        backgroundColor: Colors.light.background,
-                        paddingTop: insets.top,
-                    },
+                    { backgroundColor: Colors.light.background },
                 ]}
             >
+                <ScreenHeader title="Upload Files" />
                 <View style={styles.content}>
-                    <Text style={styles.title}>Upload Files</Text>
                     <Text style={styles.subtitle}>
                         {Platform.OS === 'web'
                             ? 'Drag and drop files here or click to select'
@@ -169,30 +182,42 @@ export default function UploadScreen() {
                 </View>
             </View>
             {selectedFiles.length > 0 && (
-                <View
-                    style={[
-                        styles.floatingButtonContainer,
-                        { paddingBottom: insets.bottom },
-                    ]}
-                >
+                <View style={styles.floatingButtonContainer}>
                     <TouchableOpacity
                         style={[
                             styles.floatingButton,
                             {
                                 backgroundColor: Colors.light.tint,
+                                opacity: isUploading ? 0.7 : 1,
                             },
                         ]}
                         onPress={handleUploadAll}
                         disabled={isUploading}
                     >
-                        <MaterialCommunityIcons
-                            name="cloud-upload"
-                            size={24}
-                            color="white"
-                        />
-                        <Text style={styles.floatingButtonText}>
-                            Upload All Files
-                        </Text>
+                        {isUploading ? (
+                            <>
+                                <ActivityIndicator
+                                    size="small"
+                                    color="white"
+                                    style={styles.buttonSpinner}
+                                />
+                                <Text style={styles.floatingButtonText}>
+                                    Uploading...{' '}
+                                    {Math.round(overallProgress * 100)}%
+                                </Text>
+                            </>
+                        ) : (
+                            <>
+                                <MaterialCommunityIcons
+                                    name="cloud-upload"
+                                    size={24}
+                                    color="white"
+                                />
+                                <Text style={styles.floatingButtonText}>
+                                    Upload All Files
+                                </Text>
+                            </>
+                        )}
                     </TouchableOpacity>
                 </View>
             )}

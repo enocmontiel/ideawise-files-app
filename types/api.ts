@@ -54,9 +54,8 @@ export const API_ENDPOINTS = {
         CANCEL: '/api/upload/cancel',
     },
     FILES: {
-        LIST: '/files',
-        LIST_BY_DEVICE: '/files/device/:deviceId',
-        DELETE: '/files/:id',
+        LIST: '/api/files/device/:deviceId',
+        DELETE: '/api/files/:id',
         DETAILS: '/api/files/:id',
     },
 } as const;

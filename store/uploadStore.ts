@@ -8,6 +8,7 @@ import {
     SyncStatus,
 } from '../types/api';
 import { fileService } from '../services/fileService';
+import { useNotificationStore } from './notificationStore';
 
 interface UploadStore extends UploadState {
     addFile: (file: FileMetadata) => void;
@@ -28,13 +29,24 @@ export const useUploadStore = create<UploadStore>()(
             syncStatus: 'synced',
             lastSyncTime: undefined,
 
-            addFile: (file) =>
+            addFile: (file) => {
                 set((state) => ({
                     files: [...state.files, file],
                     uploadHistory: [file, ...state.uploadHistory],
-                })),
+                }));
 
-            removeFile: (fileId) =>
+                // Add success notification
+                useNotificationStore.getState().addNotification({
+                    type: 'success',
+                    title: 'File Uploaded',
+                    message: `${file.name} has been uploaded successfully`,
+                });
+            },
+
+            removeFile: (fileId) => {
+                const state = get();
+                const file = state.files.find((f) => f.id === fileId);
+
                 set((state) => ({
                     files: state.files.filter((f) => f.id !== fileId),
                     uploadHistory: state.uploadHistory.filter(
@@ -45,15 +57,38 @@ export const useUploadStore = create<UploadStore>()(
                             ([id]) => id !== fileId
                         )
                     ),
-                })),
+                }));
 
-            updateUploadProgress: (fileId, progress) =>
+                if (file) {
+                    useNotificationStore.getState().addNotification({
+                        type: 'info',
+                        title: 'File Removed',
+                        message: `${file.name} has been removed`,
+                    });
+                }
+            },
+
+            updateUploadProgress: (fileId, progress) => {
+                const state = get();
+                const file = state.files.find((f) => f.id === fileId);
+
                 set((state) => ({
                     activeUploads: {
                         ...state.activeUploads,
                         [fileId]: progress,
                     },
-                })),
+                }));
+
+                if (progress.error) {
+                    useNotificationStore.getState().addNotification({
+                        type: 'error',
+                        title: 'Upload Failed',
+                        message: `Failed to upload ${file?.name || 'file'}: ${
+                            progress.error
+                        }`,
+                    });
+                }
+            },
 
             clearUploadHistory: () =>
                 set(() => ({
@@ -65,14 +100,24 @@ export const useUploadStore = create<UploadStore>()(
                     activeUploads: uploads,
                 })),
 
-            setSyncStatus: (status: SyncStatus) =>
+            setSyncStatus: (status: SyncStatus) => {
                 set(() => ({
                     syncStatus: status,
                     lastSyncTime:
                         status === 'synced'
                             ? new Date().toISOString()
                             : undefined,
-                })),
+                }));
+
+                if (status === 'error') {
+                    useNotificationStore.getState().addNotification({
+                        type: 'error',
+                        title: 'Sync Failed',
+                        message:
+                            'Failed to sync with server. Please try again.',
+                    });
+                }
+            },
 
             syncWithRemote: async () => {
                 const store = get();
@@ -106,6 +151,14 @@ export const useUploadStore = create<UploadStore>()(
                         syncStatus: 'synced',
                         lastSyncTime: new Date().toISOString(),
                     });
+
+                    if (newRemoteFiles.length > 0) {
+                        useNotificationStore.getState().addNotification({
+                            type: 'info',
+                            title: 'New Files Found',
+                            message: `Found ${newRemoteFiles.length} new file(s) during sync`,
+                        });
+                    }
                 } catch (error) {
                     console.error('Error syncing with remote:', error);
                     store.setSyncStatus('error');

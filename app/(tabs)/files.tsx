@@ -1,22 +1,21 @@
 import {
     StyleSheet,
     View,
-    Text,
     ScrollView,
     Alert,
     ActivityIndicator,
+    Platform,
 } from 'react-native';
 import { Colors } from '../../constants/Colors';
 import UploadHistory from '../../components/UploadHistory';
 import EmptyState from '../../components/EmptyState';
 import SyncIndicator from '../../components/SyncIndicator';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useEffect, useState } from 'react';
 import { fileService } from '../../services/fileService';
 import { useUploadStore } from '../../store/uploadStore';
+import { ScreenHeader } from '../../components/ui/ScreenHeader';
 
 export default function FilesScreen() {
-    const insets = useSafeAreaInsets();
     const [isDeleting, setIsDeleting] = useState(false);
     const { removeFile, uploadHistory, syncStatus, syncWithRemote } =
         useUploadStore();
@@ -32,54 +31,66 @@ export default function FilesScreen() {
     }, []);
 
     const handleDelete = async (fileId: string) => {
-        Alert.alert(
-            'Delete File',
-            'Are you sure you want to delete this file?',
-            [
-                {
-                    text: 'Cancel',
-                    style: 'cancel',
-                },
-                {
-                    text: 'Delete',
-                    style: 'destructive',
-                    onPress: async () => {
-                        try {
-                            setIsDeleting(true);
-                            await fileService.deleteFile(fileId);
-                            removeFile(fileId);
-                            // Trigger a sync after deletion
-                            syncWithRemote();
-                        } catch (error) {
-                            Alert.alert(
-                                'Error',
-                                'Failed to delete file. Please try again.'
-                            );
-                        } finally {
-                            setIsDeleting(false);
-                        }
+        const confirmDelete = async () => {
+            try {
+                setIsDeleting(true);
+                await fileService.deleteFile(fileId);
+                removeFile(fileId);
+                // Trigger a sync after deletion
+                syncWithRemote();
+            } catch (error) {
+                if (Platform.OS === 'web') {
+                    window.alert('Failed to delete file. Please try again.');
+                } else {
+                    Alert.alert(
+                        'Error',
+                        'Failed to delete file. Please try again.'
+                    );
+                }
+            } finally {
+                setIsDeleting(false);
+            }
+        };
+
+        if (Platform.OS === 'web') {
+            if (window.confirm('Are you sure you want to delete this file?')) {
+                await confirmDelete();
+            }
+        } else {
+            Alert.alert(
+                'Delete File',
+                'Are you sure you want to delete this file?',
+                [
+                    {
+                        text: 'Cancel',
+                        style: 'cancel',
                     },
-                },
-            ]
-        );
+                    {
+                        text: 'Delete',
+                        style: 'destructive',
+                        onPress: confirmDelete,
+                    },
+                ]
+            );
+        }
     };
 
     return (
         <View
             style={[
                 styles.container,
-                {
-                    backgroundColor: Colors.light.background,
-                    paddingTop: insets.top,
-                },
+                { backgroundColor: Colors.light.background },
             ]}
         >
-            <View style={styles.header}>
-                <Text style={[styles.title, { color: Colors.light.text }]}>
-                    Files
-                </Text>
-                <SyncIndicator status={syncStatus} onRetry={syncWithRemote} />
-            </View>
+            <ScreenHeader
+                title="Files"
+                rightContent={
+                    <SyncIndicator
+                        status={syncStatus}
+                        onRetry={syncWithRemote}
+                    />
+                }
+            />
             <ScrollView style={styles.scrollView}>
                 {isDeleting && (
                     <View style={styles.loadingContainer}>
@@ -107,20 +118,9 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
     },
-    header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 20,
-        paddingVertical: 10,
-    },
     scrollView: {
         flex: 1,
         padding: 20,
-    },
-    title: {
-        fontSize: 24,
-        fontWeight: 'bold',
     },
     loadingContainer: {
         position: 'absolute',

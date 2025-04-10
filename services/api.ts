@@ -7,7 +7,7 @@ import {
 } from '../types/api';
 import { deviceIdUtil } from '../utils/deviceId';
 
-const api = axios.create({
+export const api = axios.create({
     baseURL: process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000',
     timeout: 30000,
 });

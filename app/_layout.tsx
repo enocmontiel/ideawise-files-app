@@ -10,6 +10,7 @@ import {
     unregisterBackgroundUploadTask,
 } from '../tasks/uploadTask';
 import { Colors } from '../constants/Colors';
+import { NotificationProvider } from '../components/NotificationProvider';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -37,21 +38,26 @@ export default function RootLayout() {
 
     return (
         <ThemeProvider value={DefaultTheme}>
-            <Stack
-                screenOptions={{
-                    headerStyle: {
-                        backgroundColor: Colors.light.background,
-                    },
-                    headerTintColor: Colors.light.text,
-                    headerTitleStyle: {
-                        fontWeight: '600',
-                    },
-                }}
-            >
-                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                <Stack.Screen name="+not-found" />
-            </Stack>
-            <StatusBar style="light" />
+            <NotificationProvider>
+                <Stack
+                    screenOptions={{
+                        headerStyle: {
+                            backgroundColor: Colors.light.background,
+                        },
+                        headerTintColor: Colors.light.text,
+                        headerTitleStyle: {
+                            fontWeight: '600',
+                        },
+                    }}
+                >
+                    <Stack.Screen
+                        name="(tabs)"
+                        options={{ headerShown: false }}
+                    />
+                    <Stack.Screen name="+not-found" />
+                </Stack>
+                <StatusBar style="light" />
+            </NotificationProvider>
         </ThemeProvider>
     );
 }
