@@ -8,28 +8,75 @@ A cross-platform media file upload solution built with Expo (React Native) that 
 -   File type filtering (images and videos)
 -   Instant file validation
 -   Visual file preview with thumbnails
--   Chunked upload (1MB chunks)
+-   Platform-specific optimizations:
+    -   Web: Drag and drop support, blob-based chunk handling
+    -   Mobile: Camera upload, base64 chunk encoding, optimized chunk sizes
+-   Chunked upload system:
+    -   Web: 1MB chunks with blob handling
+    -   Mobile: Optimized chunk sizes with base64 encoding
+-   Device-specific upload tracking
 -   Concurrent uploads (max 3 parallel)
 -   Upload progress tracking
 -   Pause/resume/cancel operations
 -   Automatic retry mechanism
 -   Background upload support
--   Drag and drop support (web)
--   Camera upload (mobile)
 -   Upload history with local storage
+-   Cross-platform compatibility
+-   Responsive design for web platforms
 
 ## Tech Stack
 
--   Expo (React Native)
--   TypeScript
--   Zustand (State Management)
--   AsyncStorage (Local Storage)
--   Axios (API Client)
--   React Native Reanimated (Animations)
--   Expo Document Picker
--   Expo Image Picker
--   Expo File System
--   Expo Background Fetch
+Core:
+
+-   Expo (React Native) - Cross-platform development framework
+-   TypeScript - Type-safe development
+-   React Native Web - Web platform support
+
+State Management & Storage:
+
+-   Zustand - Lightweight state management
+-   AsyncStorage - Persistent local storage
+-   Expo FileSystem - File handling and management
+
+UI & Interaction:
+
+-   React Native Reanimated - Advanced animations
+-   React Native Gesture Handler - Touch and gesture handling
+-   Expo Image - Optimized image rendering
+-   Expo Blur - UI blur effects
+-   Expo Haptics - Haptic feedback
+-   @expo/vector-icons - Icon library
+
+Media Handling:
+
+-   Expo Document Picker - File selection
+-   Expo Image Picker - Image/video selection
+-   Expo Camera - Direct camera access
+-   Expo Media Library - Media file access
+-   Expo AV - Audio/video playback
+
+Networking & Data:
+
+-   Axios - HTTP client
+-   date-fns - Date manipulation
+-   UUID - Unique identifier generation
+-   Expo Crypto - Cryptographic operations
+
+Background Tasks:
+
+-   Expo Background Fetch - Background operations
+-   Expo Task Manager - Task scheduling
+
+Navigation:
+
+-   Expo Router - File-based routing
+-   React Navigation - Navigation management
+
+Development & Testing:
+
+-   Jest - Testing framework
+-   TypeScript - Static type checking
+-   Expo Dev Client - Development tools
 
 ## Getting Started
 
@@ -74,14 +121,54 @@ A cross-platform media file upload solution built with Expo (React Native) that 
 
 The app expects the following API endpoints:
 
--   `POST /api/upload/initiate` - Initiate file upload
--   `POST /api/upload/chunk` - Upload file chunk
--   `POST /api/upload/finalize` - Finalize upload
--   `GET /api/upload/status/:fileId` - Get upload status
--   `POST /api/upload/cancel` - Cancel upload
--   `GET /api/files` - List uploaded files
--   `DELETE /api/files/:id` - Delete file
--   `GET /api/files/:id` - Get file details
+-   `POST /api/upload/initiate`
+
+    -   Initiates file upload
+    -   Request: `{ fileName, fileSize, mimeType, deviceId }`
+    -   Response: `{ fileId, uploadUrl, chunks, chunkSize }`
+
+-   `POST /api/upload/chunk`
+
+    -   Uploads file chunk
+    -   Form data: `{ fileId, chunkIndex, totalChunks, chunk, deviceId }`
+    -   Platform-specific:
+        -   Web: Sends chunks as blobs
+        -   Mobile: Sends chunks as base64 encoded strings
+
+-   `POST /api/upload/finalize`
+
+    -   Finalizes upload
+    -   Request: `{ fileId, fileName, deviceId }`
+    -   Response: `{ success: true, file: FileMetadata }`
+
+-   `GET /api/upload/status/:fileId`
+
+    -   Gets upload status
+    -   Query params: `deviceId` (required)
+    -   Response: `{ fileId, progress, status, error? }`
+
+-   `POST /api/upload/cancel`
+
+    -   Cancels upload
+    -   Request: `{ fileId, deviceId }`
+    -   Response: `{ success: true }`
+
+-   `GET /api/files`
+
+    -   Lists uploaded files
+    -   Query params: `deviceId` (required)
+    -   Response: `FileMetadata[]`
+
+-   `DELETE /api/files/:id`
+
+    -   Deletes file
+    -   Query params: `deviceId` (required)
+    -   Response: `{ success: true }`
+
+-   `GET /api/files/:id`
+    -   Gets file details
+    -   Query params: `deviceId` (required)
+    -   Response: `FileMetadata`
 
 ## Environment Variables
 
