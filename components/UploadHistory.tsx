@@ -6,11 +6,19 @@ import { BlurView } from 'expo-blur';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { getFileUrl } from '../utils/fileUtils';
 
-export default function UploadHistory() {
+interface UploadHistoryProps {
+    onDelete?: (fileId: string) => void;
+}
+
+export default function UploadHistory({ onDelete }: UploadHistoryProps) {
     const { uploadHistory, removeFile } = useUploadStore();
 
     const handleDelete = (fileId: string) => {
-        removeFile(fileId);
+        if (onDelete) {
+            onDelete(fileId);
+        } else {
+            removeFile(fileId);
+        }
     };
 
     if (uploadHistory.length === 0) {

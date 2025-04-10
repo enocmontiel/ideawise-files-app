@@ -7,12 +7,10 @@ import {
     ScrollView,
     FlatList,
 } from 'react-native';
-import { useColorScheme } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
 import { useUpload } from '../../hooks/useUpload';
-import UploadHistory from '../../components/UploadHistory';
 import { FilePreview } from '../../components/FilePreview';
 import { createUploadStyles } from './styles';
 
@@ -32,10 +30,8 @@ export default function UploadScreen() {
         handleDropEvent,
     } = useUpload();
 
-    const systemColorScheme = useColorScheme();
-    const colorScheme = Platform.OS === 'web' ? 'light' : systemColorScheme;
     const insets = useSafeAreaInsets();
-    const styles = createUploadStyles(colorScheme ?? 'light');
+    const styles = createUploadStyles('light');
 
     const renderFilePreview = ({ item }: { item: any }) => (
         <FilePreview
@@ -45,7 +41,7 @@ export default function UploadScreen() {
             type={item.type}
             uri={item.uri}
             thumbnail={item.thumbnail}
-            colorScheme={colorScheme ?? 'light'}
+            colorScheme="light"
             onRemove={removeFile}
             formatFileSize={formatFileSize}
         />
@@ -57,8 +53,7 @@ export default function UploadScreen() {
                 style={[
                     styles.container,
                     {
-                        backgroundColor:
-                            Colors[colorScheme ?? 'light'].background,
+                        backgroundColor: Colors.light.background,
                         paddingTop: insets.top,
                     },
                 ]}
@@ -92,7 +87,7 @@ export default function UploadScreen() {
                             <MaterialCommunityIcons
                                 name="cloud-upload"
                                 size={48}
-                                color={Colors[colorScheme ?? 'light'].tint}
+                                color={Colors.light.tint}
                                 style={{ marginBottom: 4 }}
                             />
                             <Text style={styles.dropText}>Drop files here</Text>
@@ -102,8 +97,7 @@ export default function UploadScreen() {
                             style={[
                                 styles.button,
                                 {
-                                    backgroundColor:
-                                        Colors[colorScheme ?? 'light'].tint,
+                                    backgroundColor: Colors.light.tint,
                                     width: '100%',
                                     height: 200,
                                     justifyContent: 'center',
@@ -138,8 +132,7 @@ export default function UploadScreen() {
                                 style={[
                                     styles.button,
                                     {
-                                        backgroundColor:
-                                            Colors[colorScheme ?? 'light'].tint,
+                                        backgroundColor: Colors.light.tint,
                                     },
                                 ]}
                                 onPress={handleFilePick}
@@ -173,8 +166,6 @@ export default function UploadScreen() {
                             />
                         </View>
                     )}
-
-                    <UploadHistory />
                 </View>
             </View>
             {selectedFiles.length > 0 && (
@@ -188,8 +179,7 @@ export default function UploadScreen() {
                         style={[
                             styles.floatingButton,
                             {
-                                backgroundColor:
-                                    Colors[colorScheme ?? 'light'].tint,
+                                backgroundColor: Colors.light.tint,
                             },
                         ]}
                         onPress={handleUploadAll}

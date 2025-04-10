@@ -50,8 +50,8 @@ export const useFileUpload = () => {
             const result = await ImagePicker.launchImageLibraryAsync({
                 mediaTypes: ImagePicker.MediaTypeOptions.All,
                 quality: 1,
-                allowsEditing: true,
-                exif: true,
+                selectionLimit: 10,
+                allowsMultipleSelection: true,
             });
 
             if (result.canceled) return [];

@@ -5,27 +5,39 @@ import {
     InitiateUploadResponse,
     UploadChunk,
 } from '../types/api';
+import { deviceIdUtil } from '../utils/deviceId';
 
 const api = axios.create({
     baseURL: process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000',
     timeout: 30000,
 });
 
+// Add request interceptor to include deviceId in headers
+api.interceptors.request.use(async (config) => {
+    const deviceId = await deviceIdUtil.getDeviceId();
+    config.headers['X-Device-ID'] = deviceId;
+    return config;
+});
+
 export const uploadService = {
     initiateUpload: async (file: File): Promise<InitiateUploadResponse> => {
+        const deviceId = await deviceIdUtil.getDeviceId();
         const response = await api.post(API_ENDPOINTS.UPLOAD.INITIATE, {
             fileName: file.name,
             fileSize: file.size,
             mimeType: file.type,
+            deviceId,
         });
         return response.data;
     },
 
     uploadChunk: async (chunk: UploadChunk): Promise<void> => {
+        const deviceId = await deviceIdUtil.getDeviceId();
         const formData = new FormData();
         formData.append('fileId', chunk.fileId);
         formData.append('chunkIndex', chunk.chunkIndex.toString());
         formData.append('totalChunks', chunk.totalChunks.toString());
+        formData.append('deviceId', deviceId);
         formData.append(
             'mimeType',
             chunk.mimeType || 'application/octet-stream'
@@ -54,9 +66,11 @@ export const uploadService = {
         fileId: string,
         fileName: string
     ): Promise<FileMetadata> => {
+        const deviceId = await deviceIdUtil.getDeviceId();
         const response = await api.post(API_ENDPOINTS.UPLOAD.FINALIZE, {
             fileId,
             fileName,
+            deviceId,
         });
         return response.data;
     },
@@ -71,15 +85,22 @@ export const uploadService = {
     },
 
     cancelUpload: async (fileId: string): Promise<void> => {
-        await api.post(API_ENDPOINTS.UPLOAD.CANCEL, { fileId });
+        const deviceId = await deviceIdUtil.getDeviceId();
+        await api.post(API_ENDPOINTS.UPLOAD.CANCEL, { fileId, deviceId });
     },
 
     listFiles: async (): Promise<FileMetadata[]> => {
-        const response = await api.get(API_ENDPOINTS.FILES.LIST);
+        const deviceId = await deviceIdUtil.getDeviceId();
+        const response = await api.get(
+            `${API_ENDPOINTS.FILES.LIST}/device/${deviceId}`
+        );
         return response.data;
     },
 
     deleteFile: async (fileId: string): Promise<void> => {
-        await api.delete(API_ENDPOINTS.FILES.DELETE.replace(':id', fileId));
+        const deviceId = await deviceIdUtil.getDeviceId();
+        await api.delete(API_ENDPOINTS.FILES.DELETE.replace(':id', fileId), {
+            data: { deviceId },
+        });
     },
 };

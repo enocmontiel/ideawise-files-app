@@ -20,6 +20,8 @@ export interface UploadChunk {
     mimeType?: string;
 }
 
+export type SyncStatus = 'synced' | 'syncing' | 'error';
+
 export interface UploadProgress {
     fileId: string;
     progress: number;
@@ -38,6 +40,8 @@ export interface UploadState {
     files: FileMetadata[];
     activeUploads: Record<string, UploadProgress>;
     uploadHistory: FileMetadata[];
+    syncStatus: SyncStatus;
+    lastSyncTime?: string;
 }
 
 // API Endpoints
@@ -50,8 +54,9 @@ export const API_ENDPOINTS = {
         CANCEL: '/api/upload/cancel',
     },
     FILES: {
-        LIST: '/api/files',
-        DELETE: '/api/files/:id',
+        LIST: '/files',
+        LIST_BY_DEVICE: '/files/device/:deviceId',
+        DELETE: '/files/:id',
         DETAILS: '/api/files/:id',
     },
 } as const;

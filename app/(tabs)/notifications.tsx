@@ -1,31 +1,18 @@
 import { StyleSheet, View, Text } from 'react-native';
-import { useColorScheme } from 'react-native';
 import { Colors } from '../../constants/Colors';
 
 export default function NotificationsScreen() {
-    const colorScheme = useColorScheme();
-
     return (
         <View
             style={[
                 styles.container,
-                { backgroundColor: Colors[colorScheme ?? 'light'].background },
+                { backgroundColor: Colors.light.background },
             ]}
         >
-            <Text
-                style={[
-                    styles.title,
-                    { color: Colors[colorScheme ?? 'light'].text },
-                ]}
-            >
+            <Text style={[styles.title, { color: Colors.light.text }]}>
                 Notifications
             </Text>
-            <Text
-                style={[
-                    styles.subtitle,
-                    { color: Colors[colorScheme ?? 'light'].text },
-                ]}
-            >
+            <Text style={[styles.subtitle, { color: Colors.light.text }]}>
                 Upload status and system notifications will appear here
             </Text>
         </View>
