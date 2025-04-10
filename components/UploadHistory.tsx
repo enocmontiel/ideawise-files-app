@@ -4,20 +4,16 @@ import {
     View,
     Text,
     TouchableOpacity,
-    Image,
     ActivityIndicator,
 } from 'react-native';
 import { useUploadStore } from '../store/uploadStore';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
-import Animated, {
-    FadeIn,
-    FadeOut,
-    useAnimatedStyle,
-    withSpring,
-} from 'react-native-reanimated';
+import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { getFileUrl } from '../utils/fileUtils';
 import { FileFilter, FileFilterType } from './FileFilter';
+import FilePreviewModal from './FilePreviewModal';
+import { Image } from 'expo-image';
 
 interface UploadHistoryProps {
     onDelete?: (fileId: string) => void;
@@ -26,12 +22,30 @@ interface UploadHistoryProps {
 export default function UploadHistory({ onDelete }: UploadHistoryProps) {
     const { uploadHistory, removeFile } = useUploadStore();
     const [filter, setFilter] = useState<FileFilterType>('all');
+    const [previewFile, setPreviewFile] = useState<{
+        url: string;
+        type: 'image' | 'video';
+    } | null>(null);
 
     const handleDelete = (fileId: string) => {
         if (onDelete) {
             onDelete(fileId);
         } else {
             removeFile(fileId);
+        }
+    };
+
+    const handlePreview = (file: any) => {
+        if (file.mimeType.startsWith('image/')) {
+            setPreviewFile({
+                url: file.url,
+                type: 'image',
+            });
+        } else if (file.mimeType.startsWith('video/')) {
+            setPreviewFile({
+                url: file.url,
+                type: 'video',
+            });
         }
     };
 
@@ -53,6 +67,12 @@ export default function UploadHistory({ onDelete }: UploadHistoryProps) {
 
     return (
         <View style={styles.container}>
+            <FilePreviewModal
+                visible={!!previewFile}
+                onClose={() => setPreviewFile(null)}
+                fileUrl={previewFile?.url || ''}
+                fileType={previewFile?.type || 'image'}
+            />
             <View style={styles.header}>
                 <Text style={styles.title}>Upload History</Text>
                 <FileFilter onFilterChange={setFilter} currentFilter={filter} />
@@ -65,51 +85,68 @@ export default function UploadHistory({ onDelete }: UploadHistoryProps) {
                         exiting={FadeOut}
                         style={styles.fileCard}
                     >
-                        <BlurView intensity={50} style={styles.blurContainer}>
-                            {file.thumbnailUrl ? (
-                                <Image
-                                    source={{
-                                        uri: getFileUrl(file.thumbnailUrl),
-                                    }}
-                                    style={styles.thumbnail}
-                                    resizeMode="cover"
-                                />
-                            ) : (
-                                <View style={styles.placeholder}>
-                                    <Ionicons
-                                        name={
-                                            file.mimeType.startsWith('image/')
-                                                ? 'image'
-                                                : file.mimeType.startsWith(
-                                                      'video/'
-                                                  )
-                                                ? 'videocam'
-                                                : 'document'
-                                        }
-                                        size={32}
-                                        color="#8E8E93"
-                                    />
-                                </View>
-                            )}
-                            <View style={styles.fileInfo}>
-                                <Text style={styles.fileName} numberOfLines={1}>
-                                    {file.name}
-                                </Text>
-                                <Text style={styles.fileSize}>
-                                    {(file.size / 1024 / 1024).toFixed(1)} MB
-                                </Text>
-                            </View>
-                            <TouchableOpacity
-                                style={styles.deleteButton}
-                                onPress={() => handleDelete(file.id)}
+                        <TouchableOpacity
+                            onPress={() => handlePreview(file)}
+                            disabled={
+                                !file.mimeType.startsWith('image/') &&
+                                !file.mimeType.startsWith('video/')
+                            }
+                            style={styles.cardTouchable}
+                        >
+                            <BlurView
+                                intensity={50}
+                                style={styles.blurContainer}
                             >
-                                <Ionicons
-                                    name="trash-outline"
-                                    size={20}
-                                    color="#FF3B30"
-                                />
-                            </TouchableOpacity>
-                        </BlurView>
+                                {file.thumbnailUrl ? (
+                                    <Image
+                                        source={getFileUrl(file.thumbnailUrl)}
+                                        style={styles.thumbnail}
+                                        contentFit="cover"
+                                        transition={200}
+                                    />
+                                ) : (
+                                    <View style={styles.placeholder}>
+                                        <Ionicons
+                                            name={
+                                                file.mimeType.startsWith(
+                                                    'image/'
+                                                )
+                                                    ? 'image'
+                                                    : file.mimeType.startsWith(
+                                                          'video/'
+                                                      )
+                                                    ? 'videocam'
+                                                    : 'document'
+                                            }
+                                            size={32}
+                                            color="#8E8E93"
+                                        />
+                                    </View>
+                                )}
+                                <View style={styles.fileInfo}>
+                                    <Text
+                                        style={styles.fileName}
+                                        numberOfLines={1}
+                                    >
+                                        {file.name}
+                                    </Text>
+                                    <Text style={styles.fileSize}>
+                                        {(file.size / 1024 / 1024).toFixed(1)}{' '}
+                                        MB
+                                    </Text>
+                                </View>
+                                <TouchableOpacity
+                                    style={styles.deleteButton}
+                                    onPress={() => handleDelete(file.id)}
+                                >
+                                    <Ionicons
+                                        name="trash-outline"
+                                        size={20}
+                                        color="#FF3B30"
+                                    />
+                                </TouchableOpacity>
+                            </BlurView>
+                        </TouchableOpacity>
                     </Animated.View>
                 ))}
             </View>
@@ -142,6 +179,9 @@ const styles = StyleSheet.create({
         aspectRatio: 1,
         borderRadius: 12,
         overflow: 'hidden',
+    },
+    cardTouchable: {
+        flex: 1,
     },
     blurContainer: {
         flex: 1,
