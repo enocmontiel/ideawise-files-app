@@ -18,6 +18,36 @@ type Asset = {
     size?: number;
 };
 
+// Custom base64 encoding function to replace btoa
+function encodeBase64(input: string): string {
+    const chars =
+        'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+    let output = '';
+    let i = 0;
+    const len = input.length;
+
+    while (i < len) {
+        const chr1 = input.charCodeAt(i++);
+        const chr2 = i < len ? input.charCodeAt(i++) : NaN;
+        const chr3 = i < len ? input.charCodeAt(i++) : NaN;
+
+        const enc1 = chr1 >> 2;
+        const enc2 = ((chr1 & 3) << 4) | (isNaN(chr2) ? 0 : chr2 >> 4);
+        const enc3 = isNaN(chr2)
+            ? 64
+            : ((chr2 & 15) << 2) | (isNaN(chr3) ? 0 : chr3 >> 6);
+        const enc4 = isNaN(chr3) ? 64 : chr3 & 63;
+
+        output +=
+            chars.charAt(enc1) +
+            chars.charAt(enc2) +
+            chars.charAt(enc3) +
+            chars.charAt(enc4);
+    }
+
+    return output;
+}
+
 export const useFileUpload = () => {
     const [isUploading, setIsUploading] = useState(false);
     const { addFile, updateUploadProgress, removeFile } = useUploadStore();
@@ -184,7 +214,7 @@ export const useFileUpload = () => {
                             for (let i = 0; i < uint8Array.byteLength; i++) {
                                 binary += String.fromCharCode(uint8Array[i]);
                             }
-                            const base64Chunk = btoa(binary);
+                            const base64Chunk = encodeBase64(binary);
 
                             await uploadService.uploadChunk({
                                 fileId: tempFileId,

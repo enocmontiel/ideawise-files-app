@@ -69,12 +69,63 @@ export async function getFileInfo(uri: string): Promise<FileInfo> {
     }
 }
 
+// Base64 decoding helper
+function base64ToArrayBuffer(base64: string): ArrayBuffer {
+    const binaryString = decodeBase64(base64);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+    }
+    return bytes.buffer;
+}
+
+// Efficient base64 decoder
+function decodeBase64(base64: string): string {
+    const chars =
+        'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+    let bufferLength = base64.length * 0.75,
+        len = base64.length,
+        i,
+        p = 0,
+        encoded1,
+        encoded2,
+        encoded3,
+        encoded4;
+
+    if (base64[base64.length - 1] === '=') {
+        bufferLength--;
+        if (base64[base64.length - 2] === '=') {
+            bufferLength--;
+        }
+    }
+
+    const output = new Array(bufferLength);
+
+    for (i = 0; i < len; i += 4) {
+        encoded1 = chars.indexOf(base64[i]);
+        encoded2 = chars.indexOf(base64[i + 1]);
+        encoded3 = chars.indexOf(base64[i + 2]);
+        encoded4 = chars.indexOf(base64[i + 3]);
+
+        output[p++] = String.fromCharCode((encoded1 << 2) | (encoded2 >> 4));
+        if (encoded3 !== -1) {
+            output[p++] = String.fromCharCode(
+                ((encoded2 & 15) << 4) | (encoded3 >> 2)
+            );
+        }
+        if (encoded4 !== -1) {
+            output[p++] = String.fromCharCode(((encoded3 & 3) << 6) | encoded4);
+        }
+    }
+
+    return output.join('');
+}
+
 /**
  * Read file content in a platform-agnostic way
  */
 export async function readFileContent(uri: string): Promise<ArrayBuffer> {
     if (Platform.OS === 'web') {
-        // For web, fetch the file and convert to base64
         try {
             const response = await fetch(uri);
             return await response.arrayBuffer();
@@ -88,12 +139,7 @@ export async function readFileContent(uri: string): Promise<ArrayBuffer> {
         const base64Content = await FileSystem.readAsStringAsync(uri, {
             encoding: FileSystem.EncodingType.Base64,
         });
-        const binaryString = atob(base64Content);
-        const bytes = new Uint8Array(binaryString.length);
-        for (let i = 0; i < binaryString.length; i++) {
-            bytes[i] = binaryString.charCodeAt(i);
-        }
-        return bytes.buffer;
+        return base64ToArrayBuffer(base64Content);
     } catch (error) {
         console.error('Error reading file content on native:', error);
         throw error;
