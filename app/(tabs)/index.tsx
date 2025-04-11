@@ -14,7 +14,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
 import { useUpload } from '../../hooks/useUpload';
 import { FilePreview } from '../../components/FilePreview';
-import { createUploadStyles } from './styles';
+import { createUploadStyles } from '../styles/uploadStyles';
 import { ScreenHeader } from '../../components/ui/ScreenHeader';
 import { useUploadStore } from '../../store/uploadStore';
 

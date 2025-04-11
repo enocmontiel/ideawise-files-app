@@ -44,7 +44,11 @@ export const createUploadStyles = (colorScheme: 'light' | 'dark') => {
             padding: 20,
             paddingBottom: 100,
             ...(Platform.OS === 'web'
-                ? { overflowY: 'auto', height: '100%' as any }
+                ? {
+                      overflowY: 'auto',
+                      overflowX: 'hidden',
+                      height: '100%' as any,
+                  }
                 : {}),
         },
         title: {
